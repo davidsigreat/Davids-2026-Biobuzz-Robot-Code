@@ -5,10 +5,12 @@ import com.pedropathing.revhub.localizers.PinpointLocalizer;
 import com.pedropathing.tuning.autotune.Procedure;
 import com.pedropathing.tuning.autotune.Tuner;
 
+import org.firstinspires.ftc.teamcode.pedro.procedures.ForesightTuner;
 import org.firstinspires.ftc.teamcode.pedro.procedures.MecanumTuner;
 import org.firstinspires.ftc.teamcode.pedro.procedures.PinpointTuner;
 import org.firstinspires.ftc.teamcode.pedro.procedures.Tests;
 
+// AutoTune: http://192.168.43.1:10158 while connected to the Robot Controller.
 public class Tuning {
     @Tuner
     public static Procedure mecanumTuner() {
@@ -20,6 +22,13 @@ public class Tuning {
         return new PinpointTuner();
     }
 
+    @Tuner
+    public static Procedure foresightTuner() {
+        return new ForesightTuner((hardwareMap) -> new PinpointLocalizer(hardwareMap, Constants.localizerConfig), (hardwareMap) -> new Mecanum(hardwareMap, Constants.drivetrainConfig));
+    }
+
+    // Algorithm is null until Foresight is tuned; then pass
+    // () -> new Foresight(Constants.foresightConfig). See docs: pathing/tuning/test
     @Tuner
     public static Procedure tests() {
         return new Tests(
