@@ -9,10 +9,14 @@ import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 // Robot-centric TeleOp from the Pedro TeleOp guide. Needs Foresight tuned first;
 // before that, drive with AutoTune > Tests > Driving.
 //
-// gamepad1 drives. gamepad2 runs the mechanisms:
-//   right bumper: intake in        left bumper: intake out
-//   A: flywheel on/off             X (hold): open stopper once the flywheel is at speed
-//   B (hold): match loader         dpad left/right: step turret, dpad up: center turret
+// Everything is on gamepad1. The sticks drive, and the rest runs the mechanisms:
+//   left trigger (hold): intake    left bumper (hold): outtake
+//   right trigger (hold): shoot once the flywheel is at speed
+//   right bumper: match loader on/off
+//   A: flywheel on/off             Y: turret auto aim on/off
+//   dpad left/right: step turret, dpad up: center turret. Both turn auto aim off.
+//   back (share on PS): reset the pose, with the robot pushed square into a corner
+// During init: dpad left picks blue, dpad right picks red.
 @TeleOp(name = "Drive")
 public class DriveTeleOp extends OpMode {
 
@@ -22,6 +26,7 @@ public class DriveTeleOp extends OpMode {
     private Command intakeOut;
     private Command feed;
     private Command load;
+    private Command aim;
 
     @Override
     public void init() {
@@ -30,11 +35,18 @@ public class DriveTeleOp extends OpMode {
         intakeOut = robot.intake.outCommand();
         feed = robot.feedCommand();
         load = robot.matchLoader.loadCommand();
+        aim = robot.aimCommand(true);
+    }
+
+    @Override
+    public void init_loop() {
+        Robot.selectAlliance(gamepad1, telemetry);
     }
 
     @Override
     public void start() {
         robot.home();
+        aim.schedule();
 
         // Docs sample uses +left_stick_x / +right_stick_x, but Pedro is +lateral = left, +turn = CCW
         // (same negation as Pedro's own Tests > Driving), so stick right must be negated.
@@ -47,39 +59,54 @@ public class DriveTeleOp extends OpMode {
 
     @Override
     public void loop() {
-        if (gamepad2.rightBumperWasPressed()) {
+        if (gamepad1.leftTriggerWasPressed()) {
             intakeIn.schedule();
-        } else if (gamepad2.rightBumperWasReleased()) {
+        } else if (gamepad1.leftTriggerWasReleased()) {
             intakeIn.cancel();
         }
 
-        if (gamepad2.leftBumperWasPressed()) {
+        if (gamepad1.leftBumperWasPressed()) {
             intakeOut.schedule();
-        } else if (gamepad2.leftBumperWasReleased()) {
+        } else if (gamepad1.leftBumperWasReleased()) {
             intakeOut.cancel();
         }
 
-        if (gamepad2.aWasPressed()) {
-            robot.flywheel.toggleCommand(RobotConstants.FLYWHEEL_SHOOT_RPM).schedule();
+        if (gamepad1.aWasPressed()) {
+            robot.flywheel.toggleCommand(robot.shotRpm()).schedule();
         }
 
-        if (gamepad2.xWasPressed()) {
+        if (gamepad1.yWasPressed()) {
+            if (aim.isScheduled()) {
+                aim.cancel();
+            } else {
+                aim.schedule();
+            }
+        }
+
+        if (gamepad1.backWasPressed()) {
+            robot.resetPoseToCorner();
+            gamepad1.rumble(300);
+        }
+
+        if (gamepad1.rightTriggerWasPressed()) {
             feed.schedule();
-        } else if (gamepad2.xWasReleased()) {
+        } else if (gamepad1.rightTriggerWasReleased()) {
             feed.cancel();
         }
 
-        if (gamepad2.bWasPressed()) {
-            load.schedule();
-        } else if (gamepad2.bWasReleased()) {
-            load.cancel();
+        if (gamepad1.rightBumperWasPressed()) {
+            if (load.isScheduled()) {
+                load.cancel();
+            } else {
+                load.schedule();
+            }
         }
 
-        if (gamepad2.dpadLeftWasPressed()) {
+        if (gamepad1.dpadLeftWasPressed()) {
             robot.turret.stepCommand(RobotConstants.TURRET_STEP_DEGREES).schedule();
-        } else if (gamepad2.dpadRightWasPressed()) {
+        } else if (gamepad1.dpadRightWasPressed()) {
             robot.turret.stepCommand(-RobotConstants.TURRET_STEP_DEGREES).schedule();
-        } else if (gamepad2.dpadUpWasPressed()) {
+        } else if (gamepad1.dpadUpWasPressed()) {
             robot.turret.centerCommand().schedule();
         }
 
@@ -93,5 +120,9 @@ public class DriveTeleOp extends OpMode {
         telemetry.addData("Flywheel Target RPM", robot.flywheel.getTargetRpm());
         telemetry.addData("Flywheel At Speed", robot.flywheel.atSpeed());
         telemetry.addData("Turret Target", robot.turret.getTargetAngle());
+        telemetry.addData("Auto Aim", aim.isScheduled());
+        telemetry.addData("Tracking Goal", robot.goalNumber());
+        telemetry.addData("Goal In Turret Range", robot.goalInTurretRange());
+        telemetry.addData("Distance To Goal", robot.distanceToGoal());
     }
 }

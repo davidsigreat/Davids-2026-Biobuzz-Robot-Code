@@ -20,6 +20,25 @@ public class RobotConstants {
     public static final String BACK_LEFT_NAME = "BL";    // Control Hub motor 2
     public static final String BACK_RIGHT_NAME = "BR";   // Control Hub motor 3
     public static final String PINPOINT_NAME = "PinPoint";  // Control Hub I2C bus 1
+    // For the corner pose reset and the Panels drawing. Front and back are measured from the center of rotation, which is
+    // behind the middle of the robot. Width is side to side.
+    public static double ROBOT_CENTER_TO_FRONT_INCHES = 10;
+    public static double ROBOT_CENTER_TO_BACK_INCHES = 7.625;
+    public static double ROBOT_WIDTH_INCHES = 13;
+
+    // Aiming
+    // Blue's two seesaw goals in Pedro's coordinates. Red's are mirrored from these: (58, 89.75) and (58, 51.75).
+    public static double BLUE_GOAL_1_X = 83.5;
+    public static double BLUE_GOAL_1_Y = 89.75;
+    public static double BLUE_GOAL_2_X = 83.5;
+    public static double BLUE_GOAL_2_Y = 51.75;
+    // How much closer the other goal must be before the turret switches, so it can't flip back and
+    // forth when the robot is about the same distance from both.
+    public static double GOAL_SWITCH_MARGIN_INCHES = 6;
+    // Flywheel RPM for each distance from the goal, smallest distance first. Get these from the
+    // Shot Tuning OpMode. Placeholders until tested.
+    public static double[] SHOT_DISTANCES_INCHES = {36, 72, 108, 144};
+    public static double[] SHOT_RPMS = {2500, 3000, 3500, 4000};
 
     // Flywheel
     public static final String FLYWHEEL_LEFT_NAME = "Shooter1";   // Expansion Hub motor 1 + encoder 1
@@ -35,10 +54,17 @@ public class RobotConstants {
     // How long the stopper stays open per shot in Robot.shoot(). Starting guess until tested.
     public static double SHOOT_FEED_MS = 300;
     public static int AUTO_SHOT_COUNT = 3;
-    // Motor power = kS + kV * targetRpm + kP * rpmError. kS and kV are from Flywheel SysId, kP is a guess.
-    public static double FLYWHEEL_KS = 0.1004;
-    public static double FLYWHEEL_KV = 0.0001795;
-    public static double FLYWHEEL_KP = 0.0005;
+    // Motor power = kS + kV * rpm + kA * rpmPerSecond + kP * rpmError + kD * rpmErrorPerSecond.
+    // Copy these from Flywheel SysId. kA and kD do nothing until they are set.
+    public static double FLYWHEEL_KS = 0.0735;
+    public static double FLYWHEEL_KV = 0.0001776;
+    public static double FLYWHEEL_KA = 0.0001457;
+    public static double FLYWHEEL_KP = 0.001;
+    public static double FLYWHEEL_KD = 0.0000022;
+    // How fast the loop's setpoint climbs to the target, which is what gives kA something to act on.
+    public static double FLYWHEEL_RAMP_RPM_PER_SECOND = 2702;
+    // Smooths the error rate for kD, since the 28 tick encoder is noisy. 1 is no smoothing.
+    public static double FLYWHEEL_D_FILTER = 0.3;
 
     // Intake
     public static final String INTAKE1_NAME = "Intake1";  // Expansion Hub motor 2
@@ -57,18 +83,23 @@ public class RobotConstants {
     // servos match here. They drive the same turret, so they must turn it the same way or they will fight.
     public static final Servo.Direction TURRET1_DIRECTION = Servo.Direction.FORWARD;
     public static final Servo.Direction TURRET2_DIRECTION = Servo.Direction.FORWARD;
-    // Turret degrees across servo positions 0 to 1. Starting guess: Axon MAX MK2 at 0.175 deg/us over
-    // the SDK's 600-2400 us range, geared 1:1. Measure this once the servos are programmed.
-    public static double TURRET_SERVO_RANGE_DEGREES = 315;
+    // The Axon MAX MK2's full signal range, wider than the SDK's default 600-2400 us.
+    public static final double TURRET_PWM_MIN_US = 500;
+    public static final double TURRET_PWM_MAX_US = 2500;
+    // Turret degrees across servo positions 0 to 1. Starting guess: 0.175 deg/us over the 2000 us
+    // signal range, geared 1:1. Measure this once the servos are programmed.
+    public static double TURRET_SERVO_RANGE_DEGREES = 350;
     public static double TURRET_CENTER_POSITION = 0.5;
-    public static double TURRET_MIN_ANGLE = -90;
-    public static double TURRET_MAX_ANGLE = 90;
+    // 0 is the back of the robot and + is clockwise seen from above. The turret can reach 180 each way,
+    // so these stop just short of that.
+    public static double TURRET_MIN_ANGLE = -175;
+    public static double TURRET_MAX_ANGLE = 175;
     public static double TURRET_STEP_DEGREES = 5;
 
     // Stopper
     public static final String STOPPER_NAME = "Stopper";  // Control Hub servo 1
-    public static double STOPPER_OPEN_POSITION = 0.5;
-    public static double STOPPER_CLOSED_POSITION = 0.0;
+    public static double STOPPER_OPEN_POSITION = 0.6;
+    public static double STOPPER_CLOSED_POSITION = 0.35;
 
     // Match loader
     public static final String MATCH_LOADER_NAME = "MatchLoader";  // Control Hub servo 3

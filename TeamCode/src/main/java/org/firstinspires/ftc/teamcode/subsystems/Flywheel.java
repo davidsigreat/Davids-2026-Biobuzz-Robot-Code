@@ -5,6 +5,7 @@ import com.pedropathing.ivy.commands.Commands;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.HardwareMap;
+import com.qualcomm.robotcore.util.ElapsedTime;
 import com.qualcomm.robotcore.util.Range;
 
 import org.firstinspires.ftc.teamcode.RobotConstants;
@@ -13,8 +14,12 @@ public class Flywheel {
     // Only this motor has an encoder, so it is the only speed reading.
     private final DcMotorEx leftMotor;
     private final DcMotorEx rightMotor;
+    private final ElapsedTime loopTimer = new ElapsedTime();
     private double targetRpm = 0;
+    private double setpointRpm = 0;
     private double currentRpm = 0;
+    private double lastError = 0;
+    private double errorRate = 0;
     private double power = 0;
 
     public Flywheel(HardwareMap hardwareMap) {
@@ -42,16 +47,33 @@ public class Flywheel {
 
     // Call once per loop.
     public void update() {
+        double dt = loopTimer.seconds();
+        loopTimer.reset();
         readRpm();
 
-        if (targetRpm > 0) {
-            double feedforward = RobotConstants.FLYWHEEL_KS + RobotConstants.FLYWHEEL_KV * targetRpm;
-            double feedback = RobotConstants.FLYWHEEL_KP * (targetRpm - currentRpm);
-            // Never below 0: the wheel coasts down rather than being driven backwards.
-            applyPower(Range.clip(feedforward + feedback, 0, 1));
-        } else {
+        if (targetRpm <= 0) {
+            // Start the next spin-up from the wheel's real speed, with no leftover error.
+            setpointRpm = currentRpm;
+            lastError = 0;
+            errorRate = 0;
             applyPower(0);
+            return;
         }
+
+        double maxChange = RobotConstants.FLYWHEEL_RAMP_RPM_PER_SECOND * dt;
+        double setpointChange = Range.clip(targetRpm - setpointRpm, -maxChange, maxChange);
+        setpointRpm += setpointChange;
+
+        double error = setpointRpm - currentRpm;
+        errorRate += RobotConstants.FLYWHEEL_D_FILTER * ((error - lastError) / dt - errorRate);
+        lastError = error;
+
+        double feedforward = RobotConstants.FLYWHEEL_KS
+                + RobotConstants.FLYWHEEL_KV * setpointRpm
+                + RobotConstants.FLYWHEEL_KA * setpointChange / dt;
+        double feedback = RobotConstants.FLYWHEEL_KP * error + RobotConstants.FLYWHEEL_KD * errorRate;
+        // Never below 0: the wheel coasts down rather than being driven backwards.
+        applyPower(Range.clip(feedforward + feedback, 0, 1));
     }
 
     // Skips the control loop, for measuring the gains. Call once per loop instead of update().
