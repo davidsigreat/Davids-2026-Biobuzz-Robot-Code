@@ -21,7 +21,6 @@ public class MechanismTest extends OpMode {
     private static final double START_RPM = 1000;
     private static final double MAX_RPM = 6000;
     private static final double RPM_STEP = 250;
-    private static final double TURRET_STEP_DEGREES = 5;
 
     private Intake intake;
     private Flywheel flywheel;
@@ -66,6 +65,7 @@ public class MechanismTest extends OpMode {
         } else {
             flywheel.stop();
         }
+        flywheel.update();
 
         if (gamepad1.x) {
             stopper.open();
@@ -80,17 +80,17 @@ public class MechanismTest extends OpMode {
         }
 
         if (gamepad1.dpadLeftWasPressed()) {
-            turret.setAngle(turret.getTargetAngle() + TURRET_STEP_DEGREES);
+            turret.setAngle(turret.getTargetAngle() + RobotConstants.TURRET_STEP_DEGREES);
         } else if (gamepad1.dpadRightWasPressed()) {
-            turret.setAngle(turret.getTargetAngle() - TURRET_STEP_DEGREES);
+            turret.setAngle(turret.getTargetAngle() - RobotConstants.TURRET_STEP_DEGREES);
         } else if (gamepad1.yWasPressed()) {
             turret.setAngle(0);
         }
 
         telemetry.addData("Flywheel Test RPM", testRpm);
         telemetry.addData("Flywheel On", flywheelOn);
-        telemetry.addData("Flywheel Left RPM", flywheel.getLeftRpm());
-        telemetry.addData("Flywheel Right RPM", flywheel.getRightRpm());
+        telemetry.addData("Flywheel RPM", flywheel.getRpm());
+        telemetry.addData("Flywheel Power", flywheel.getPower());
         telemetry.addData("Flywheel At Speed", flywheel.atSpeed());
         telemetry.addData("Turret Target", turret.getTargetAngle());
     }

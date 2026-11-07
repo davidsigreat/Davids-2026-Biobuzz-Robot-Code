@@ -1,16 +1,10 @@
 package org.firstinspires.ftc.teamcode;
 
-import com.pedropathing.follower.Follower;
+import com.pedropathing.ivy.Command;
+import com.pedropathing.ivy.commands.Commands;
 import com.pedropathing.math.Pose;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
-
-import org.firstinspires.ftc.teamcode.pedro.Constants;
-import org.firstinspires.ftc.teamcode.subsystems.Flywheel;
-import org.firstinspires.ftc.teamcode.subsystems.Intake;
-import org.firstinspires.ftc.teamcode.subsystems.MatchLoader;
-import org.firstinspires.ftc.teamcode.subsystems.Stopper;
-import org.firstinspires.ftc.teamcode.subsystems.Turret;
 
 // Robot-centric TeleOp from the Pedro TeleOp guide. Needs Foresight tuned first;
 // before that, drive with AutoTune > Tests > Driving.
@@ -22,86 +16,82 @@ import org.firstinspires.ftc.teamcode.subsystems.Turret;
 @TeleOp(name = "Drive")
 public class DriveTeleOp extends OpMode {
 
-    private static final double SHOOT_RPM = 3000;
-    private static final double TURRET_STEP_DEGREES = 5;
+    private Robot robot;
 
-    private Follower follower;
-    private Intake intake;
-    private Flywheel flywheel;
-    private Turret turret;
-    private Stopper stopper;
-    private MatchLoader matchLoader;
+    private Command intakeIn;
+    private Command intakeOut;
+    private Command feed;
+    private Command load;
 
     @Override
     public void init() {
-        follower = Constants.create(hardwareMap);
-        intake = new Intake(hardwareMap);
-        flywheel = new Flywheel(hardwareMap);
-        turret = new Turret(hardwareMap);
-        stopper = new Stopper(hardwareMap);
-        matchLoader = new MatchLoader(hardwareMap);
+        robot = new Robot(hardwareMap);
+        intakeIn = robot.intake.inCommand();
+        intakeOut = robot.intake.outCommand();
+        feed = robot.feedCommand();
+        load = robot.matchLoader.loadCommand();
     }
 
     @Override
     public void start() {
-        turret.setAngle(0);
+        robot.home();
+
+        // Docs sample uses +left_stick_x / +right_stick_x, but Pedro is +lateral = left, +turn = CCW
+        // (same negation as Pedro's own Tests > Driving), so stick right must be negated.
+        Commands.infinite(() -> robot.follower.manual(
+                -gamepad1.left_stick_y,
+                -gamepad1.left_stick_x,
+                -gamepad1.right_stick_x
+        )).requiring(robot.follower).schedule();
     }
 
     @Override
     public void loop() {
-        // Docs sample uses +left_stick_x / +right_stick_x, but Pedro is +lateral = left, +turn = CCW
-        // (same negation as Pedro's own Tests > Driving), so stick right must be negated.
-        follower.manual(
-                -gamepad1.left_stick_y,
-                -gamepad1.left_stick_x,
-                -gamepad1.right_stick_x
-        );
+        if (gamepad2.rightBumperWasPressed()) {
+            intakeIn.schedule();
+        } else if (gamepad2.rightBumperWasReleased()) {
+            intakeIn.cancel();
+        }
 
-        follower.update();
-
-        if (gamepad2.right_bumper) {
-            intake.in();
-        } else if (gamepad2.left_bumper) {
-            intake.out();
-        } else {
-            intake.stop();
+        if (gamepad2.leftBumperWasPressed()) {
+            intakeOut.schedule();
+        } else if (gamepad2.leftBumperWasReleased()) {
+            intakeOut.cancel();
         }
 
         if (gamepad2.aWasPressed()) {
-            if (flywheel.getTargetRpm() > 0) {
-                flywheel.stop();
-            } else {
-                flywheel.setTargetRpm(SHOOT_RPM);
-            }
+            robot.flywheel.toggleCommand(RobotConstants.FLYWHEEL_SHOOT_RPM).schedule();
         }
 
-        if (gamepad2.x && flywheel.atSpeed()) {
-            stopper.open();
-        } else {
-            stopper.close();
+        if (gamepad2.xWasPressed()) {
+            feed.schedule();
+        } else if (gamepad2.xWasReleased()) {
+            feed.cancel();
         }
 
-        if (gamepad2.b) {
-            matchLoader.load();
-        } else {
-            matchLoader.retract();
+        if (gamepad2.bWasPressed()) {
+            load.schedule();
+        } else if (gamepad2.bWasReleased()) {
+            load.cancel();
         }
 
         if (gamepad2.dpadLeftWasPressed()) {
-            turret.setAngle(turret.getTargetAngle() + TURRET_STEP_DEGREES);
+            robot.turret.stepCommand(RobotConstants.TURRET_STEP_DEGREES).schedule();
         } else if (gamepad2.dpadRightWasPressed()) {
-            turret.setAngle(turret.getTargetAngle() - TURRET_STEP_DEGREES);
+            robot.turret.stepCommand(-RobotConstants.TURRET_STEP_DEGREES).schedule();
         } else if (gamepad2.dpadUpWasPressed()) {
-            turret.setAngle(0);
+            robot.turret.centerCommand().schedule();
         }
 
-        Pose robotPose = follower.pose();
+        robot.update();
+
+        Pose robotPose = robot.follower.pose();
         telemetry.addData("Robot X", robotPose.x());
         telemetry.addData("Robot Y", robotPose.y());
         telemetry.addData("Robot Heading", Math.toDegrees(robotPose.heading()));
-        telemetry.addData("Flywheel RPM", flywheel.getRpm());
-        telemetry.addData("Flywheel Target RPM", flywheel.getTargetRpm());
-        telemetry.addData("Flywheel At Speed", flywheel.atSpeed());
-        telemetry.addData("Turret Target", turret.getTargetAngle());
+        telemetry.addData("Flywheel RPM", robot.flywheel.getRpm());
+        telemetry.addData("Flywheel Target RPM", robot.flywheel.getTargetRpm());
+        telemetry.addData("Flywheel At Speed", robot.flywheel.atSpeed());
+        telemetry.addData("Turret Target", robot.turret.getTargetAngle());
     }
 }

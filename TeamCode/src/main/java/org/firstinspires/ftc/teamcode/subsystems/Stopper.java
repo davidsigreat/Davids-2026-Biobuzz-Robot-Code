@@ -1,23 +1,28 @@
 package org.firstinspires.ftc.teamcode.subsystems;
 
+import com.pedropathing.ivy.Command;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.hardware.Servo;
 
-public class Stopper {
-    private static final double OPEN_POSITION = 0.5;
-    private static final double CLOSED_POSITION = 0.0;
+import org.firstinspires.ftc.teamcode.RobotConstants;
 
+public class Stopper {
     private final Servo servo;
 
     public Stopper(HardwareMap hardwareMap) {
-        servo = hardwareMap.get(Servo.class, "stopper");
+        servo = hardwareMap.get(Servo.class, RobotConstants.STOPPER_NAME);
     }
 
     public void open() {
-        servo.setPosition(OPEN_POSITION);
+        servo.setPosition(RobotConstants.STOPPER_OPEN_POSITION);
     }
 
     public void close() {
-        servo.setPosition(CLOSED_POSITION);
+        servo.setPosition(RobotConstants.STOPPER_CLOSED_POSITION);
+    }
+
+    // Stays open until cancelled, then closes.
+    public Command openCommand() {
+        return Command.build().setStart(this::open).setEnd(end -> close()).requiring(this);
     }
 }

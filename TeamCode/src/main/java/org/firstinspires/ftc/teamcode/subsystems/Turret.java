@@ -1,36 +1,41 @@
 package org.firstinspires.ftc.teamcode.subsystems;
 
+import com.pedropathing.ivy.Command;
+import com.pedropathing.ivy.commands.Commands;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.Range;
 
-public class Turret {
-    // Degrees across servo positions 0 to 1: Axon MAX MK2 at 0.175 deg/us over the SDK's 600-2400 us range.
-    private static final double SERVO_RANGE_DEGREES = 315;
-    private static final double CENTER_POSITION = 0.5;
-    private static final double MIN_ANGLE = -90;
-    private static final double MAX_ANGLE = 90;
+import org.firstinspires.ftc.teamcode.RobotConstants;
 
-    private final Servo leftServo;
-    private final Servo rightServo;
+public class Turret {
+    private final Servo turret1;
+    private final Servo turret2;
     private double targetAngle = 0;
 
     public Turret(HardwareMap hardwareMap) {
-        leftServo = hardwareMap.get(Servo.class, "turretLeft");
-        rightServo = hardwareMap.get(Servo.class, "turretRight");
-        // Both servos drive the same turret, so they must turn it the same way or they will fight.
-        leftServo.setDirection(Servo.Direction.FORWARD);
-        rightServo.setDirection(Servo.Direction.FORWARD);
+        turret1 = hardwareMap.get(Servo.class, RobotConstants.TURRET1_NAME);
+        turret2 = hardwareMap.get(Servo.class, RobotConstants.TURRET2_NAME);
+        turret1.setDirection(RobotConstants.TURRET1_DIRECTION);
+        turret2.setDirection(RobotConstants.TURRET2_DIRECTION);
     }
 
     public void setAngle(double degrees) {
-        targetAngle = Range.clip(degrees, MIN_ANGLE, MAX_ANGLE);
-        double position = CENTER_POSITION + targetAngle / SERVO_RANGE_DEGREES;
-        leftServo.setPosition(position);
-        rightServo.setPosition(position);
+        targetAngle = Range.clip(degrees, RobotConstants.TURRET_MIN_ANGLE, RobotConstants.TURRET_MAX_ANGLE);
+        double position = RobotConstants.TURRET_CENTER_POSITION + targetAngle / RobotConstants.TURRET_SERVO_RANGE_DEGREES;
+        turret1.setPosition(position);
+        turret2.setPosition(position);
     }
 
     public double getTargetAngle() {
         return targetAngle;
+    }
+
+    public Command stepCommand(double degrees) {
+        return Commands.instant(() -> setAngle(targetAngle + degrees)).requiring(this);
+    }
+
+    public Command centerCommand() {
+        return Commands.instant(() -> setAngle(0)).requiring(this);
     }
 }
