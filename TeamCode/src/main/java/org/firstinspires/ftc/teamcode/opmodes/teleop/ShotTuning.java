@@ -1,23 +1,25 @@
-package org.firstinspires.ftc.teamcode;
+package org.firstinspires.ftc.teamcode.opmodes.teleop;
 
 import com.pedropathing.ivy.Command;
 import com.pedropathing.ivy.commands.Commands;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
+import org.firstinspires.ftc.teamcode.Robot;
+import org.firstinspires.ftc.teamcode.RobotConstants;
+
 import java.util.Locale;
 import java.util.Map;
 import java.util.TreeMap;
 
-// Collects the shot table. Drive to a spot, change the RPM until shots score, then save the point.
-// The saved points print ready to paste into RobotConstants.SHOT_DISTANCES_INCHES and SHOT_RPMS.
+// Collects shot data. Drive to a spot, change the RPM until shots score, then save the point.
+// The saved points print as two lists, for refitting the RPM curve in RobotConstants.
 // The saved list is lost when this OpMode stops, so copy it before pressing stop.
 // Everything is on gamepad1. The turret tracks the closest goal, and the sticks drive:
 //   A: flywheel on/off             dpad up/down: change the test RPM
 //   right trigger (hold): shoot    left trigger (hold): intake
 //   B: save this distance and RPM  X: remove the last saved point
 //   back (share on PS): reset the pose, with the robot pushed square into a corner
-// During init: dpad left picks blue, dpad right picks red.
 @TeleOp(name = "Shot Tuning", group = "Test")
 public class ShotTuning extends OpMode {
 
@@ -37,11 +39,6 @@ public class ShotTuning extends OpMode {
         robot = new Robot(hardwareMap);
         feed = robot.feedCommand();
         intakeIn = robot.intake.inCommand();
-    }
-
-    @Override
-    public void init_loop() {
-        Robot.selectAlliance(gamepad1, telemetry);
     }
 
     @Override
@@ -112,11 +109,11 @@ public class ShotTuning extends OpMode {
         telemetry.addData("Flywheel RPM", "%.0f", robot.flywheel.getRpm());
         telemetry.addData("Flywheel At Speed", robot.flywheel.atSpeed());
         telemetry.addData("Saved Points", savedPoints.size());
-        telemetry.addData("SHOT_DISTANCES_INCHES", tableLine(true));
-        telemetry.addData("SHOT_RPMS", tableLine(false));
+        telemetry.addData("Distances", tableLine(true));
+        telemetry.addData("RPMs", tableLine(false));
     }
 
-    // TreeMap keeps the points sorted by distance, which is the order the table needs.
+    // TreeMap keeps the points sorted by distance, which keeps the lists easy to read.
     private String tableLine(boolean distances) {
         StringBuilder line = new StringBuilder("{");
         for (Map.Entry<Long, Double> point : savedPoints.entrySet()) {

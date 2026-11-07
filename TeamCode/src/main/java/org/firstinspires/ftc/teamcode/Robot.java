@@ -10,10 +10,8 @@ import com.pedropathing.ivy.Scheduler;
 import com.pedropathing.ivy.commands.Commands;
 import com.pedropathing.ivy.groups.Groups;
 import com.pedropathing.math.Pose;
-import com.qualcomm.robotcore.hardware.Gamepad;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 
-import org.firstinspires.ftc.robotcore.external.Telemetry;
 import org.firstinspires.ftc.teamcode.pedro.Constants;
 import org.firstinspires.ftc.teamcode.subsystems.Flywheel;
 import org.firstinspires.ftc.teamcode.subsystems.Intake;
@@ -23,14 +21,15 @@ import org.firstinspires.ftc.teamcode.subsystems.Turret;
 
 // Everything TeleOp and Auto share: the subsystems, the Ivy update loop, and commands that use more
 // than one subsystem. Don't call setStart/setEnd/requiring on an Ivy group: it replaces the group's logic.
+//
+// All poses are written for the blue side. The field is the same when rotated 180 degrees, so a robot
+// set up the same way on red sees the same thing around it, and the same code works with no alliance
+// setting. On red, Panels shows the robot on the blue side.
 public class Robot {
-    public enum Alliance { BLUE, RED }
-
-    // Static so they carry over from Auto into TeleOp.
-    public static Alliance alliance = Alliance.BLUE;
+    // Static so it carries over from Auto into TeleOp.
     private static Pose lastPose = new Pose(FieldMath.FIELD_SIZE / 2, FieldMath.FIELD_SIZE / 2, 0);
 
-    private int goalIndex = 0;
+    private boolean feeding = false;
 
     public final Follower follower;
     public final Intake intake;
@@ -60,45 +59,33 @@ public class Robot {
         turret.setAngle(0);
     }
 
-    // Call from init_loop(), so the drive team can pick before the match starts.
-    public static void selectAlliance(Gamepad gamepad, Telemetry telemetry) {
-        if (gamepad.dpadLeftWasPressed()) {
-            alliance = Alliance.BLUE;
-        } else if (gamepad.dpadRightWasPressed()) {
-            alliance = Alliance.RED;
-        }
-        telemetry.addData("Alliance (dpad left blue, right red)", alliance);
-    }
-
-    // Poses are written for blue, and this mirrors them when on red.
-    public static Pose forAlliance(Pose bluePose) {
-        return alliance == Alliance.RED ? FieldMath.mirror(bluePose) : bluePose;
-    }
-
     // Call once per loop.
     public void update() {
         Scheduler.execute();
         flywheel.update();
         follower.update();
         lastPose = follower.pose();
-        goalIndex = FieldMath.nearestGoal(lastPose, goals(), goalIndex, RobotConstants.GOAL_SWITCH_MARGIN_INCHES);
         showPoseOnPanels();
     }
 
     private Pose[] goals() {
         return new Pose[] {
-                forAlliance(new Pose(RobotConstants.BLUE_GOAL_1_X, RobotConstants.BLUE_GOAL_1_Y, 0)),
-                forAlliance(new Pose(RobotConstants.BLUE_GOAL_2_X, RobotConstants.BLUE_GOAL_2_Y, 0))
+                new Pose(RobotConstants.BLUE_GOAL_1_X, RobotConstants.BLUE_GOAL_1_Y, 0),
+                new Pose(RobotConstants.BLUE_GOAL_2_X, RobotConstants.BLUE_GOAL_2_Y, 0)
         };
     }
 
+    private int goalIndex() {
+        return follower.pose().y() > RobotConstants.GOAL_SPLIT_Y ? 0 : 1;
+    }
+
     private Pose goal() {
-        return goals()[goalIndex];
+        return goals()[goalIndex()];
     }
 
     // 1 or 2, matching the names in RobotConstants.
     public int goalNumber() {
-        return goalIndex + 1;
+        return goalIndex() + 1;
     }
 
     public double distanceToGoal() {
@@ -107,8 +94,11 @@ public class Robot {
 
     // Flywheel RPM for the robot's current distance from the goal.
     public double shotRpm() {
-        return FieldMath.interpolate(distanceToGoal(),
-                RobotConstants.SHOT_DISTANCES_INCHES, RobotConstants.SHOT_RPMS);
+        return RobotConstants.SHOT_RPM_BASE * Math.pow(RobotConstants.SHOT_RPM_GROWTH, distanceToGoal());
+    }
+
+    public boolean farEnoughToShoot() {
+        return distanceToGoal() > RobotConstants.MIN_SHOT_DISTANCE_INCHES;
     }
 
     // Turret angle that faces the goal, which can be past what the turret can reach.
@@ -128,13 +118,13 @@ public class Robot {
                 RobotConstants.ROBOT_CENTER_TO_BACK_INCHES, RobotConstants.ROBOT_WIDTH_INCHES));
     }
 
-    // Keeps the turret on the closest goal. With useShotTable, it also keeps the flywheel at the table's
+    // Keeps the turret on the closest goal. With useShotRpm, it also keeps the flywheel at the right
     // RPM for that distance while it's on. Doesn't require the flywheel, so turning it on and off doesn't
     // stop the aiming.
-    public Command aimCommand(boolean useShotTable) {
+    public Command aimCommand(boolean useShotRpm) {
         return Commands.infinite(() -> {
             turret.setAngle(angleToGoal());
-            if (useShotTable && flywheel.getTargetRpm() > 0) {
+            if (useShotRpm && flywheel.getTargetRpm() > 0) {
                 flywheel.setTargetRpm(shotRpm());
             }
         }).requiring(turret);
@@ -163,7 +153,7 @@ public class Robot {
         // The goal being tracked is red, and the other one is black.
         Pose[] goals = goals();
         for (int i = 0; i < goals.length; i++) {
-            String color = i == goalIndex ? PanelsField.INSTANCE.getRED() : PanelsField.INSTANCE.getBLACK();
+            String color = i == goalIndex() ? PanelsField.INSTANCE.getRED() : PanelsField.INSTANCE.getBLACK();
             field.setStyle(PanelsField.INSTANCE.getTRANSPARENT(), color, 1);
             field.moveCursor(goals[i].x(), goals[i].y());
             field.circle(3);
@@ -178,21 +168,44 @@ public class Robot {
     }
 
     // Waits for the flywheel to reach speed once, then keeps the stopper open and the intake running
-    // until cancelled, even if the speed drops between shots.
+    // until cancelled, even if the speed drops between shots. Pauses while too close to the goal, then
+    // waits for speed again.
     public Command feedCommand() {
-        return Groups.sequential(
-                Commands.waitUntil(flywheel::atSpeed),
-                Groups.parallel(stopper.openCommand(), intake.inCommand())
-        );
+        return Command.build()
+                .setStart(() -> feeding = false)
+                .setExecute(this::runFeed)
+                .setEnd(end -> stopFeed())
+                .requiring(stopper, intake);
     }
 
-    // Fires one game piece each time the flywheel is at speed. The flywheel must already be spinning,
-    // or this waits forever. Runs the intake to push game pieces up to the stopper.
+    private void runFeed() {
+        if (!farEnoughToShoot()) {
+            feeding = false;
+        } else if (flywheel.atSpeed()) {
+            feeding = true;
+        }
+
+        if (feeding) {
+            stopper.open();
+            intake.shoot();
+        } else {
+            stopFeed();
+        }
+    }
+
+    private void stopFeed() {
+        stopper.close();
+        intake.stop();
+    }
+
+    // Fires one game piece each time the flywheel is at speed and the robot is far enough from the goal.
+    // The flywheel must already be spinning and the robot past the minimum distance, or this waits
+    // forever. Runs the intake to push game pieces up to the stopper.
     public Command shootCommand(int shots) {
         Command oneShot = Groups.sequential(
-                Commands.waitUntil(flywheel::atSpeed),
+                Commands.waitUntil(() -> flywheel.atSpeed() && farEnoughToShoot()),
                 Groups.deadline(Commands.waitMs(RobotConstants.SHOOT_FEED_MS), stopper.openCommand())
         );
-        return Groups.deadline(Groups.repeat(oneShot, shots), intake.inCommand());
+        return Groups.deadline(Groups.repeat(oneShot, shots), intake.shootCommand());
     }
 }

@@ -41,6 +41,10 @@ public class Intake {
         setPercent(RobotConstants.INTAKE_OUT_PERCENT);
     }
 
+    public void shoot() {
+        setPercent(RobotConstants.INTAKE_SHOOT_PERCENT);
+    }
+
     public void stop() {
         setPercent(0);
     }
@@ -48,6 +52,11 @@ public class Intake {
     // Runs until cancelled, then stops the intake.
     public Command inCommand() {
         return Command.build().setStart(this::in).setEnd(end -> stop()).requiring(this);
+    }
+
+    // Pushes game pieces up to the flywheel. Runs until cancelled, then stops the intake.
+    public Command shootCommand() {
+        return Command.build().setStart(this::shoot).setEnd(end -> stop()).requiring(this);
     }
 
     // Runs until cancelled, then stops the intake.

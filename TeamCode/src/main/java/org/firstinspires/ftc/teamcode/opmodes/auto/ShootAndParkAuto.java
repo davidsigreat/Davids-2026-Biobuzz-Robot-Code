@@ -1,4 +1,4 @@
-package org.firstinspires.ftc.teamcode;
+package org.firstinspires.ftc.teamcode.opmodes.auto;
 
 import static com.pedropathing.api.Paths.line;
 
@@ -9,11 +9,14 @@ import com.pedropathing.paths.Path;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 
+import org.firstinspires.ftc.teamcode.Robot;
+import org.firstinspires.ftc.teamcode.RobotConstants;
+
 // Drives to SHOOT_POSE while the flywheel spins up, fires the preloads, then drives to PARK_POSE.
 @Autonomous(name = "Shoot And Park")
 public class ShootAndParkAuto extends OpMode {
 
-    // Blue alliance field poses in Pedro's coordinates: inches and radians. Red mirrors them.
+    // Blue side field poses in Pedro's coordinates: inches and radians. These also run on red.
     // Placeholders: START_POSE must be where the robot really starts, or the aiming will be off.
     private static final Pose START_POSE = new Pose(36, 36, 0);
     private static final Pose SHOOT_POSE = new Pose(60, 36, 0);
@@ -27,21 +30,13 @@ public class ShootAndParkAuto extends OpMode {
     }
 
     @Override
-    public void init_loop() {
-        Robot.selectAlliance(gamepad1, telemetry);
-    }
-
-    @Override
     public void start() {
-        Pose start = Robot.forAlliance(START_POSE);
-        Pose shoot = Robot.forAlliance(SHOOT_POSE);
-        Pose park = Robot.forAlliance(PARK_POSE);
-        robot.follower.setPose(start);
+        robot.follower.setPose(START_POSE);
         robot.home();
         robot.aimCommand(true).schedule();
 
-        Path toShoot = line(start, shoot).constant(shoot.heading());
-        Path toPark = line(shoot, park).constant(park.heading());
+        Path toShoot = line(START_POSE, SHOOT_POSE).constant(SHOOT_POSE.heading());
+        Path toPark = line(SHOOT_POSE, PARK_POSE).constant(PARK_POSE.heading());
 
         Groups.sequential(
                 Groups.parallel(

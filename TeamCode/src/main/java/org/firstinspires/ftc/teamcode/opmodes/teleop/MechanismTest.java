@@ -1,8 +1,9 @@
-package org.firstinspires.ftc.teamcode;
+package org.firstinspires.ftc.teamcode.opmodes.teleop;
 
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
+import org.firstinspires.ftc.teamcode.RobotConstants;
 import org.firstinspires.ftc.teamcode.subsystems.Flywheel;
 import org.firstinspires.ftc.teamcode.subsystems.Intake;
 import org.firstinspires.ftc.teamcode.subsystems.MatchLoader;
@@ -20,7 +21,7 @@ public class MechanismTest extends OpMode {
 
     private static final double START_RPM = 1000;
     private static final double MAX_RPM = 6000;
-    private static final double RPM_STEP = 250;
+    private static final double RPM_STEP = 50;
 
     private Intake intake;
     private Flywheel flywheel;

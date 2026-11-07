@@ -1,4 +1,4 @@
-package org.firstinspires.ftc.teamcode;
+package org.firstinspires.ftc.teamcode.opmodes.teleop;
 
 import com.pedropathing.ivy.Command;
 import com.pedropathing.ivy.commands.Commands;
@@ -6,17 +6,18 @@ import com.pedropathing.math.Pose;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
+import org.firstinspires.ftc.teamcode.Robot;
+
 // Robot-centric TeleOp from the Pedro TeleOp guide. Needs Foresight tuned first;
 // before that, drive with AutoTune > Tests > Driving.
 //
 // Everything is on gamepad1. The sticks drive, and the rest runs the mechanisms:
 //   left trigger (hold): intake    left bumper (hold): outtake
-//   right trigger (hold): shoot once the flywheel is at speed
+//   right trigger (hold): shoot once the flywheel is at speed and the goal is far enough away
 //   right bumper: match loader on/off
 //   A: flywheel on/off             Y: turret auto aim on/off
-//   dpad left/right: step turret, dpad up: center turret. Both turn auto aim off.
-//   back (share on PS): reset the pose, with the robot pushed square into a corner
-// During init: dpad left picks blue, dpad right picks red.
+//   dpad up: turret to 0 and auto aim off, until Y turns it back on
+//   dpad down or back (share on PS): reset the pose, with the robot pushed square into a corner
 @TeleOp(name = "Drive")
 public class DriveTeleOp extends OpMode {
 
@@ -36,11 +37,6 @@ public class DriveTeleOp extends OpMode {
         feed = robot.feedCommand();
         load = robot.matchLoader.loadCommand();
         aim = robot.aimCommand(true);
-    }
-
-    @Override
-    public void init_loop() {
-        Robot.selectAlliance(gamepad1, telemetry);
     }
 
     @Override
@@ -83,7 +79,7 @@ public class DriveTeleOp extends OpMode {
             }
         }
 
-        if (gamepad1.backWasPressed()) {
+        if (gamepad1.backWasPressed() || gamepad1.dpadDownWasPressed()) {
             robot.resetPoseToCorner();
             gamepad1.rumble(300);
         }
@@ -102,11 +98,7 @@ public class DriveTeleOp extends OpMode {
             }
         }
 
-        if (gamepad1.dpadLeftWasPressed()) {
-            robot.turret.stepCommand(RobotConstants.TURRET_STEP_DEGREES).schedule();
-        } else if (gamepad1.dpadRightWasPressed()) {
-            robot.turret.stepCommand(-RobotConstants.TURRET_STEP_DEGREES).schedule();
-        } else if (gamepad1.dpadUpWasPressed()) {
+        if (gamepad1.dpadUpWasPressed()) {
             robot.turret.centerCommand().schedule();
         }
 
@@ -123,6 +115,7 @@ public class DriveTeleOp extends OpMode {
         telemetry.addData("Auto Aim", aim.isScheduled());
         telemetry.addData("Tracking Goal", robot.goalNumber());
         telemetry.addData("Goal In Turret Range", robot.goalInTurretRange());
-        telemetry.addData("Distance To Goal", robot.distanceToGoal());
+        telemetry.addData(" Distance To Goal", robot.distanceToGoal());
+        telemetry.addData("Far Enough To Shoot", robot.farEnoughToShoot());
     }
 }

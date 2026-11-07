@@ -9,27 +9,8 @@ public class FieldMath {
     public static final double FIELD_SIZE = 141.5;
     private static final double QUARTER_TURN = Math.PI / 2;
 
-    // The same spot on the other alliance's side of the field.
-    public static Pose mirror(Pose pose) {
-        return new Pose(FIELD_SIZE - pose.x(), pose.y(), Math.PI - pose.heading());
-    }
-
     public static double distance(Pose a, Pose b) {
         return Math.hypot(b.x() - a.x(), b.y() - a.y());
-    }
-
-    // Index of the goal to track. Stays on currentIndex unless another goal is closer by more than margin.
-    public static int nearestGoal(Pose robot, Pose[] goals, int currentIndex, double margin) {
-        int nearest = currentIndex;
-        double nearestDistance = distance(robot, goals[currentIndex]) - margin;
-        for (int i = 0; i < goals.length; i++) {
-            double goalDistance = distance(robot, goals[i]);
-            if (goalDistance < nearestDistance) {
-                nearest = i;
-                nearestDistance = goalDistance;
-            }
-        }
-        return nearest;
     }
 
     // Turret angle that faces the point, from -180 to 180. The turret's zero is the back of the robot,
@@ -39,20 +20,6 @@ public class FieldMath {
         double counterclockwiseFromFront = Math.toDegrees(fieldAngle - robot.heading());
         double degrees = 180 - counterclockwiseFromFront;
         return degrees - 360 * Math.floor((degrees + 180) / 360);
-    }
-
-    // Straight line between the nearest two table entries, and the end value past either end.
-    public static double interpolate(double value, double[] inputs, double[] outputs) {
-        if (value <= inputs[0]) {
-            return outputs[0];
-        }
-        for (int i = 1; i < inputs.length; i++) {
-            if (value <= inputs[i]) {
-                double fraction = (value - inputs[i - 1]) / (inputs[i] - inputs[i - 1]);
-                return outputs[i - 1] + fraction * (outputs[i] - outputs[i - 1]);
-            }
-        }
-        return outputs[outputs.length - 1];
     }
 
     // The robot's four corners as {x, y}: front left, front right, back right, back left.

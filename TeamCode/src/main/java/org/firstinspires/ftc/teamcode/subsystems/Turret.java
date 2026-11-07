@@ -37,10 +37,6 @@ public class Turret {
         return targetAngle;
     }
 
-    public Command stepCommand(double degrees) {
-        return Commands.instant(() -> setAngle(targetAngle + degrees)).requiring(this);
-    }
-
     public Command centerCommand() {
         return Commands.instant(() -> setAngle(0)).requiring(this);
     }

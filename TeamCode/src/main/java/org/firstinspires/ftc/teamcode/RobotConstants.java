@@ -26,19 +26,25 @@ public class RobotConstants {
     public static double ROBOT_CENTER_TO_BACK_INCHES = 7.625;
     public static double ROBOT_WIDTH_INCHES = 13;
 
-    // Aiming
-    // Blue's two seesaw goals in Pedro's coordinates. Red's are mirrored from these: (58, 89.75) and (58, 51.75).
-    public static double BLUE_GOAL_1_X = 83.5;
-    public static double BLUE_GOAL_1_Y = 89.75;
-    public static double BLUE_GOAL_2_X = 83.5;
-    public static double BLUE_GOAL_2_Y = 51.75;
-    // How much closer the other goal must be before the turret switches, so it can't flip back and
-    // forth when the robot is about the same distance from both.
-    public static double GOAL_SWITCH_MARGIN_INCHES = 6;
-    // Flywheel RPM for each distance from the goal, smallest distance first. Get these from the
-    // Shot Tuning OpMode. Placeholders until tested.
-    public static double[] SHOT_DISTANCES_INCHES = {36, 72, 108, 144};
-    public static double[] SHOT_RPMS = {2500, 3000, 3500, 4000};
+    /**
+     * Aiming
+     * Blue's two seesaw goals in Pedro's coordinates. These work on red too, because the field is the
+     * same when rotated 180 degrees.
+     */
+    public static double BLUE_GOAL_1_X = 84.0;
+    public static double BLUE_GOAL_1_Y = 89.5;
+    public static double BLUE_GOAL_2_X = 84.0;
+    public static double BLUE_GOAL_2_Y = 52.0;
+
+    // The robot tracks goal 1 above this y and goal 2 at or below it. The middle of the field.
+    public static double GOAL_SPLIT_Y = 70.75; //Middle
+
+    // Flywheel RPM at a distance from the goal in inches: SHOT_RPM_BASE * SHOT_RPM_GROWTH ^ distance.
+    // Fitted to tested shots.
+    public static double SHOT_RPM_BASE = 2629.33874;
+    public static double SHOT_RPM_GROWTH = 1.00388;
+    // The robot won't shoot this close to the goal, or closer.
+    public static double MIN_SHOT_DISTANCE_INCHES = 24;
 
     // Flywheel
     public static final String FLYWHEEL_LEFT_NAME = "Shooter1";   // Expansion Hub motor 1 + encoder 1
@@ -75,6 +81,7 @@ public class RobotConstants {
     public static final DcMotor.ZeroPowerBehavior INTAKE_ZERO_POWER = DcMotor.ZeroPowerBehavior.BRAKE;
     public static double INTAKE_IN_PERCENT = 100;
     public static double INTAKE_OUT_PERCENT = -100;
+    public static double INTAKE_SHOOT_PERCENT = 80;
 
     // Turret
     public static final String TURRET1_NAME = "Turret1";  // Control Hub servo 0
