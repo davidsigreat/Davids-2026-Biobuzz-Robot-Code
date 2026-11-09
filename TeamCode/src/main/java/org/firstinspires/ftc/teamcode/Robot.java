@@ -88,13 +88,18 @@ public class Robot {
         return goalIndex() + 1;
     }
 
+    private Pose turretPose() {
+        return FieldMath.turretPose(follower.pose(), RobotConstants.TURRET_FORWARD_OFFSET_INCHES);
+    }
+
+    // From the turret, since that's where shots leave the robot.
     public double distanceToGoal() {
-        return FieldMath.distance(follower.pose(), goal());
+        return FieldMath.distance(turretPose(), goal());
     }
 
     // Flywheel RPM for the robot's current distance from the goal.
     public double shotRpm() {
-        return RobotConstants.SHOT_RPM_BASE * Math.pow(RobotConstants.SHOT_RPM_GROWTH, distanceToGoal());
+        return ((RobotConstants.SHOT_RPM_BASE * Math.pow(RobotConstants.SHOT_RPM_GROWTH, distanceToGoal()))*RobotConstants.SHOT_RPM_MULTIPLIER);
     }
 
     public boolean farEnoughToShoot() {
@@ -104,7 +109,7 @@ public class Robot {
     // Turret angle that faces the goal, which can be past what the turret can reach.
     public double angleToGoal() {
         Pose goal = goal();
-        return FieldMath.turretAngle(follower.pose(), goal.x(), goal.y());
+        return FieldMath.turretAngle(turretPose(), goal.x(), goal.y());
     }
 
     public boolean goalInTurretRange() {
@@ -202,9 +207,14 @@ public class Robot {
     // The flywheel must already be spinning and the robot past the minimum distance, or this waits
     // forever. Runs the intake to push game pieces up to the stopper.
     public Command shootCommand(int shots) {
+        return shootCommand(shots, RobotConstants.SHOOT_FEED_MS);
+    }
+
+    // Same, with the stopper open for feedMs per shot.
+    public Command shootCommand(int shots, double feedMs) {
         Command oneShot = Groups.sequential(
                 Commands.waitUntil(() -> flywheel.atSpeed() && farEnoughToShoot()),
-                Groups.deadline(Commands.waitMs(RobotConstants.SHOOT_FEED_MS), stopper.openCommand())
+                Groups.deadline(Commands.waitMs(feedMs), stopper.openCommand())
         );
         return Groups.deadline(Groups.repeat(oneShot, shots), intake.shootCommand());
     }

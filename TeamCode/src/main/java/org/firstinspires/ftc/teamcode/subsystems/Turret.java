@@ -37,6 +37,10 @@ public class Turret {
         return targetAngle;
     }
 
+    public double getServoPosition() {
+        return turret1.getPosition();
+    }
+
     public Command centerCommand() {
         return Commands.instant(() -> setAngle(0)).requiring(this);
     }

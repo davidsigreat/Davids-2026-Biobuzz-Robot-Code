@@ -1,5 +1,6 @@
 package org.firstinspires.ftc.teamcode.opmodes.teleop;
 
+import com.pedropathing.follower.ManualDrive;
 import com.pedropathing.ivy.Command;
 import com.pedropathing.ivy.commands.Commands;
 import com.pedropathing.math.Pose;
@@ -7,9 +8,10 @@ import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
 import org.firstinspires.ftc.teamcode.Robot;
+import org.firstinspires.ftc.teamcode.RobotConstants;
 
-// Robot-centric TeleOp from the Pedro TeleOp guide. Needs Foresight tuned first;
-// before that, drive with AutoTune > Tests > Driving.
+// Field-centric TeleOp from the Pedro TeleOp guide, so it needs a correct heading: run Auto first, or
+// reset the pose in a corner. Needs Foresight tuned first; before that, drive with AutoTune > Tests > Driving.
 //
 // Everything is on gamepad1. The sticks drive, and the rest runs the mechanisms:
 //   left trigger (hold): intake    left bumper (hold): outtake
@@ -46,11 +48,13 @@ public class DriveTeleOp extends OpMode {
 
         // Docs sample uses +left_stick_x / +right_stick_x, but Pedro is +lateral = left, +turn = CCW
         // (same negation as Pedro's own Tests > Driving), so stick right must be negated.
-        Commands.infinite(() -> robot.follower.manual(
-                -gamepad1.left_stick_y,
-                -gamepad1.left_stick_x,
-                -gamepad1.right_stick_x
-        )).requiring(robot.follower).schedule();
+        Commands.infinite(() -> robot.follower.manual(ManualDrive.fieldCentric(
+                gamepad1.left_stick_y,
+                gamepad1.left_stick_x,
+                -gamepad1.right_stick_x,
+                robot.follower.pose().heading(),
+                Math.toRadians(RobotConstants.FIELD_CENTRIC_OFFSET_DEGREES)
+        ))).requiring(robot.follower).schedule();
     }
 
     @Override

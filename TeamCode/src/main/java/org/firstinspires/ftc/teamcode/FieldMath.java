@@ -22,6 +22,13 @@ public class FieldMath {
         return degrees - 360 * Math.floor((degrees + 180) / 360);
     }
 
+    // Where the turret's pivot is on the field, with the robot's heading. forward is how far the pivot
+    // sits ahead of the robot's center of rotation, negative if it's behind.
+    public static Pose turretPose(Pose robot, double forward) {
+        double[] point = offset(robot, forward, 0);
+        return new Pose(point[0], point[1], robot.heading());
+    }
+
     // The robot's four corners as {x, y}: front left, front right, back right, back left.
     public static double[][] robotCorners(Pose pose, double toFront, double toBack, double robotWidth) {
         double halfWidth = robotWidth / 2;
